@@ -1,0 +1,103 @@
+from Engine import *
+from data_load_fit import *
+
+def FitAllTemps():
+#==============================================================================
+# This function fits all curves taken at different temperatures.
+# and zero field to the McMillen model. It takes no parameters
+# and returns two arrays: 
+#     1. Tempdata, which has the fit parameters,
+#     2. TempdataRaw, the full fit report
+#==============================================================================
+
+    V, G, Gasym = LoadandSymmetrizeTemp(1,0.12)
+    Gerr = abs(Gasym)+0.02
+    params = makeParamaters([1.24,0.4,0.4,1.24,1,0.1,0.04])
+    start = time.time()
+    out = minimize(Goodness, params, args=(V, G, Gerr,[-1.5,1.5]))
+    end = time.time()
+    Tempdata = readParameters(out.params)
+    TempdataRaw = [out]
+    
+    for k in range(2,9):
+        params = out.params
+        params['Gamma1'].vary = False
+        params['Gamma2'].vary = False
+        params['Neff2'].vary = False             
+        V, G, Gasym = LoadandSymmetrizeTemp(k,0.14)
+        Gerr = abs(Gasym)+0.02
+        start = time.time()
+        out = minimize(Goodness, params, args=(V, G, Gerr,[-1.5,1.5]))
+        end = time.time()
+        Tempdata = numpy.vstack((Tempdata,readParameters(out.params)))
+        TempdataRaw.append(out)
+    
+    return Tempdata, TempdataRaw
+
+def FitTempsTests():
+#==============================================================================
+#     This function fits the low temperature data in two variations:
+#     1. With Delta2 = 0
+#     2. With T = 200mK
+#============================================================================== 
+    V, G, Gasym = LoadandSymmetrizeTemp(1,0.12)
+    Gerr = abs(Gasym)+0.02
+    params = makeParamaters([1.24,0.0,0.4,1.24,1,0.1,0.04])
+    params['Delta02'].vary = False
+    start = time.time()
+    out = minimize(Goodness, params, args=(V, G, Gerr,[-1.5,1.5]))
+    end = time.time()
+    
+    FitNoDelta2 = readParameters(out.params)
+    FitNoDelta2Raw = out
+    
+    V, G, Gasym = LoadandSymmetrizeTemp(1,0.12)
+    Gerr = abs(Gasym)+0.02
+    params = makeParamaters([1.24,0.4,0.4,1.24,1,0.1,0.016])
+    params['T'].vary = False  
+    start = time.time()
+    out = minimize(Goodness, params, args=(V, G, Gerr,[-1.5,1.5]))
+    end = time.time()
+    
+    FitFixedT200mK = readParameters(out.params)
+    FitFixedT200mKRaw = out
+    
+    return FitNoDelta2,FitNoDelta2Raw,FitFixedT200mK,FitFixedT200mKRaw
+
+def FitPerFieldMcMillen():
+#==============================================================================
+# This function fits all curves taken at different perpendicular fields.
+# to the McMillen model. It takes no parameters
+# and returns two arrays: 
+#     1. PerFieldData, which has the fit parameters,
+#     2. PerFielddataRaw, the full fit report
+#==============================================================================
+
+    k = 46
+    V, G, Gasym = LoadandSymmetrizePerField(46,-0.035)
+    Gerr = 0.02*numpy.ones(len(V));
+    params = makeParamaters([1.224,0.286,0.38,1.32,1,0.11,0.06])
+    params['Delta01'].vary = True
+    params['Delta02'].vary = True
+    # fig = LoadFitPlot(V,G,params,[-3,3])
+    
+    start = time.time()
+    out = minimize(Goodness2, params, args = (V,G,Gerr,[-1.3,1.3]))
+    print(k,': ',time.time() - start)
+    
+    PerFieldData = readParameters(out.params)
+    PerFielddataRaw = [out]
+    for k in range(45,3,-1):
+        params = out.params
+        params['Neff2'].vary = False             
+        V, G, Gasym = LoadandSymmetrizePerField(k,-0.035)
+        start = time.time()
+        out = minimize(Goodness2, params, args=(V, G, Gerr,[0.3,1.3]))
+        end = time.time()
+        print(k,': ',time.time() - start)
+        PerFieldData = numpy.vstack((PerFieldData,readParameters(out.params)))
+        PerFielddataRaw.append(out)
+
+    return PerFieldData,PerFielddataRaw
+    
+Pdata,PdataRaw = FitPerFieldMcMillen()

@@ -59,7 +59,7 @@ def AG_DOS(E, Delta, alpha):
 
     return (u / numpy.sqrt(u ** 2 - 1)).real
 
-def CalculateDOS(Energys, Delta0, Gamma, Neff, alpha=0):
+def CalculateDOS(Energys, Delta0, Gamma, Neff, alpha=0,dynes = 0):
     Neff = numpy.array(Neff)
     Gamma = numpy.array(Gamma)
     Delta0 = numpy.array(Delta0)
@@ -78,7 +78,7 @@ def CalculateDOS(Energys, Delta0, Gamma, Neff, alpha=0):
         sol, err = Iterations(initDelta, Energys[k], Delta0, Gamma)
         # Deltas = sol
         # errors = err
-        u = Energys[k]  / sol
+        u = Energys[k]  / sol + 1j * dynes
         if alpha == 0.0:
             Ns = Neff * (u / (u ** 2 - 1) ** 0.5).real
         else:
@@ -87,10 +87,10 @@ def CalculateDOS(Energys, Delta0, Gamma, Neff, alpha=0):
 
     return N
 
-def IofV(Vs, Delta0, Gamma, Neff, T, alpha=0):
+def IofV(Vs, Delta0, Gamma, Neff, T, alpha=0,dynes = 0):
     energys = numpy.linspace(0, 6, 1000)
     # energys = numpy.linspace(0, 6, 11)
-    N = CalculateDOS(energys, Delta0, Gamma, Neff, alpha)
+    N = CalculateDOS(energys, Delta0, Gamma, Neff, alpha,dynes)
 
     energys = numpy.concatenate([numpy.flipud(-energys), energys])
     N = numpy.concatenate([numpy.flipud(N), N])

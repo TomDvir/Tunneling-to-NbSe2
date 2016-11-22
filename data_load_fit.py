@@ -1,7 +1,20 @@
 ## Data manipulation and fit functions
-from Engine import *
+from Engine import IofV
+import scipy
+import numpy
+import matplotlib.pyplot as plt
+from scipy.interpolate import interp1d
+from lmfit import Parameters
+import matplotlib.image as mpimg
+
+
 
 def LoadandSymmetrizeTemp(index, shift):
+    """
+    LoadandSymmetrizeTemp(index, shift)
+    return symmetrize(V, G, shift)
+    """
+    
     bigdata = scipy.io.loadmat('summary-data.mat')
     tempdata = bigdata['Temperature']
     data = numpy.array(tempdata[0][index - 1][1][0][0][0]).transpose()
@@ -90,11 +103,15 @@ def LoadFitPlot(V, G, params, Vlim, alpha=0):
     Gamma = [params['Gamma1'].value, params['Gamma2'].value]
     Neff = [params['Neff1'].value, params['Neff2'].value]
     T = params['T'].value
+    if 'dynes' in params:
+        dynes = params['dynes'].value
+    else:
+        dynes = 0
 
-    print(readParameters(params))
+#    print(readParameters(params))
 
     Vs = numpy.linspace(min(V), max(V), 300)
-    I = IofV(Vs, Delta0, Gamma, Neff, T, alpha)
+    I = IofV(Vs, Delta0, Gamma, Neff, T, alpha,dynes)
 
     fig = plt.figure(figsize=(8, 8), dpi=80)
     plt.subplot(2, 1, 1)
@@ -119,6 +136,64 @@ def LoadFitPlot(V, G, params, Vlim, alpha=0):
     plt.show()
 
     return fig
+def LoadFitPlotG(axes,V,G,params,Vlim,dGdV = False,shift = 0.,Logscale = False):
+        
+    Delta0 = [params['Delta01'].value, params['Delta02'].value]
+    Gamma = [params['Gamma1'].value, params['Gamma2'].value]
+    Neff = [params['Neff1'].value, params['Neff2'].value]
+    T = params['T'].value
+    
+    Vs = numpy.linspace(min(V),max(V),300)
+    I = IofV(Vs,Delta0,Gamma,Neff,T)
+    
+    axes.plot(V,G + shift ,color = 'black',label = 'data',marker = 's',markersize = 3,linewidth = 0)
+    axes.plot(Vs[0:len(Vs)-1],shift + numpy.diff(I)/numpy.diff(Vs),'r',linewidth=1.5,label = 'fit')
+    axes.set_xlim([Vlim[0], Vlim[1]])
+#     axes.set_ylim([0,2])
+#     axes.legend()
+    axes.set_xlabel('V (mV)')
+    axes.set_ylabel('G (a.u.)')
+    
+    if dGdV == True:
+        t_axes = inset_axes(axes, width="30%", height=1.3,loc=3)
+        t_axes.plot(V[1:len(V)],numpy.diff(G)/numpy.diff(V),color = 'black',label = 'data',marker = 's',\
+             markersize = 2.5,linewidth = 0)
+        t_axes.plot(Vs[1:len(Vs)-1],numpy.diff(I,2)/(numpy.diff(Vs[1:len(Vs)])**2),'r',linewidth=1.5,label = 'fit')
+        t_axes.set_xlim([Vlim[0], Vlim[1]])
+        t_axes.get_xaxis().set_ticks([])
+        t_axes.get_yaxis().set_ticks([])
+
+    if Logscale == True:
+        t_axes = inset_axes(axes, width="30%", height=1.3,loc=4)
+        t_axes.plot(V,G,color = 'black',label = 'data',marker = 's',\
+             markersize = 2.5,linewidth = 0)
+        t_axes.plot(Vs[0:len(Vs)-1],shift + numpy.diff(I)/numpy.diff(Vs),'r',linewidth=1.5,label = 'fit')
+        t_axes.set_xlim([Vlim[0], Vlim[1]])
+        t_axes.get_xaxis().set_ticks([])
+        t_axes.get_yaxis().set_ticks([])
+        t_axes.set_ylim([1e-3,3])
+        t_axes.set_yscale('log')
+        
+def LoadFitPlotdGdV(axes,V,G,params,Vlim,shift = 0.):
+        
+    Delta0 = [params['Delta01'].value, params['Delta02'].value]
+    Gamma = [params['Gamma1'].value, params['Gamma2'].value]
+    Neff = [params['Neff1'].value, params['Neff2'].value]
+    T = params['T'].value
+    
+    Vs = numpy.linspace(min(V),max(V),300)
+    I = IofV(Vs,Delta0,Gamma,Neff,T)
+    
+    
+    axes.plot(V[1:len(V)],numpy.diff(G)/numpy.diff(V)+ shift,color = 'black',label = 'data',marker = 's',\
+             markersize = 2.5,linewidth = 0)
+    axes.plot(Vs[1:len(Vs)-1],numpy.diff(I,2)/(numpy.diff(Vs[1:len(Vs)])**2)+ shift,'r',linewidth=1.5,label = 'fit')
+    axes.set_xlim([Vlim[0], Vlim[1]])
+#     axes.set_ylim([0,2])
+#     axes.legend()
+    axes.set_xlabel('V (mV)')
+    axes.set_ylabel('dG/dV (a.u.)')
+
 
 
 def Goodness(params, V, G, Gerr, Vlim):
@@ -207,6 +282,8 @@ def makeParamaters(dataline):
     params.add('Neff1', value=dataline[4], vary=False)
     params.add('Neff2', value=dataline[5], min=0.0, vary=True)
     params.add('T', value=dataline[6], min=0.0, vary=True)
+    if len(dataline)>7:
+        params.add('dynes', value=dataline[7], min=0.0, vary=False)
     return params
 
 
@@ -219,6 +296,8 @@ def readParameters(params):
     dataline[4] = params['Neff1'].value
     dataline[5] = params['Neff2'].value
     dataline[6] = params['T'].value
+    if 'dynes' in params:
+        dataline[7] = params['dynes'].value
     return dataline
 
 

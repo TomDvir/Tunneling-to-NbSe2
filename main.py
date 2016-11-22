@@ -1,28 +1,29 @@
 from Engine import *
 from data_load_fit import *
+import numpy
 
-AllData = read_Alldata()
+PerFieldDataFreeDeltas = Pdata
 
-Tempdata = AllData['TempData']
-k = 1
-V, G, Gasym = LoadandSymmetrizeTemp(k,0.14)
-# fig = LoadFitPlot(V,G,makeParamaters(Tempdata[k-1]),[0,2],0.0001)
+f, ax = plt.subplots(1)
+ax.plot(PerB,(numpy.flipud(PerFieldDataFreeDeltas).transpose())[2],color = 'black',label = '$\Gamma_1$',marker = 's',\
+             markersize = 6,linewidth = 0)
+ax.plot(PerB,(numpy.flipud(PerFieldDataFreeDeltas).transpose())[3],color = 'red',label = '$\Gamma_2$',marker = 's',\
+             markersize = 6,linewidth = 0)
+ax.plot(PerB,(numpy.flipud(PerFieldDataFreeDeltas).transpose())[0],color = 'blue',label = '$\Delta_1$',marker = 's',\
+             markersize = 6,linewidth = 0)
+ax.plot(PerB,(numpy.flipud(PerFieldDataFreeDeltas).transpose())[1],color = 'green',label = '$\Delta_2$',marker = 's',\
+             markersize = 6,linewidth = 0)
+ax.set_xlabel('$B_\perp$  (mT)') 
+ax.set_ylabel('$\Gamma$, $\Delta$ (eV)')
+ax.set_title('(b).')
+ax.set_ylim([0,1.4])
+ax.legend()
+f.show()
+
+f, ax = plt.subplots(1)
+for k in range(46,0,-3):
+    V, G, Gasym= LoadandSymmetrizePerField(k,-0.035)
+    LoadFitPlotG(ax,V,G,makeParamaters(PerFieldDataFreeDeltas[46-k]),[0,3],False,(46-k)*0.1)
 
 
-Es = numpy.linspace(0,2,100)
-Ds = numpy.array([1 + 0.01j,0.5+0.01j]).real
-Ns = AG_DOS(Es[0],Ds,0.1)
-for k in range(1,len(Es)):
-    Ns = numpy.vstack((Ns,AG_DOS(Es[k],Ds,0)))
-plt.plot(Es,(Ns.transpose())[0])
-plt.plot(Es,(Ns.transpose())[1])
 
-
-Ns = AG_DOS(Es[0],Ds,0.1)
-for k in range(1,len(Es)):
-    Ns = numpy.vstack((Ns,AG_DOS(Es[k],Ds,0.01)))
-
-plt.plot(Es,(Ns.transpose())[0])
-plt.plot(Es,(Ns.transpose())[1])
-
-plt.show()
